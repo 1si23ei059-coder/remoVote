@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scan 1</title>
+    <script>
+        // This is mostly the same as SimpleScan
+        function submitForm() {
+            const url = 'https://localhost:8443/SGIFPCapture';
+            var params = "timeout=" + {{ user_input.Timeout }};
+            params += "&quality=" + {{ user_input.Quality }};
+            params += "&licstr=" + encodeURIComponent("{{ user_input.SecuGen_Lic }}"); 
+            params += "&templateformat=" + "{{ user_input.TemplateFormat }}";
+            params += "&imagewsqrate=" + "{{ user_input.ImageWSQRate }}";
+
+            // Fetching data from the external API
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
+            }).then( response => {
+                return response.json();
+            })
+            .then((responsedata) => {
+                let result = responsedata;
+
+                // Prepare form submission to backend
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/scan2';
+
+                // Fill form with received data -> don't need all of these data elements, but to be complete.....
+                ['ErrorCode', 'Manufacturer', 'Model', 'SerialNumber', 'ImageWidth', 'ImageHeight', 'ImageDPI', 'ImageQuality', 'NFIQ', 'TemplateBase64', 'WSQImageSize', 'WSQImage', 'BMPBase64'].forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = result[key];
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+                return;
+
+            }).catch(error => {
+                alert("Check if SGIBIOSRV is running; Status = ERROR:");
+            });
+            return;
+        }
+    </script>
+</head>
+<body>
+    <h1>Capture First Fingerprint</h1>
+    <button onclick="submitForm()">Capture Fingerprint</button>
+    <br><br>
+    <button onclick="window.location.href='/'">Reset</button>
+</body>
+</html>

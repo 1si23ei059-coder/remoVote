@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SecuGen Capture Response</title>
+</head>
+<body>
+    <br>
+    <div>
+      <table>
+        <tr><td>Timeout (ms):</td><td><b>{{ user_input.Timeout }}</b></td></tr>
+        <tr><td>Quality (0-100):</td><td><b>{{ user_input.Quality }}</b></td></tr>
+        <tr><td>Fake Finger Detection:</td><td><b>{{ user_input.Fake_Detect }}</b></td></tr>
+        <tr><td>Template Format:</td><td><b>{{ user_input.TemplateFormat }}</b></td></tr>
+        <tr><td>Image WSQ Rate:</td><td><b>{{ user_input.ImageWSQRate }}</b></td></tr>
+      </table>
+    </div>
+
+    <br>
+    <button onclick="window.location.href='/'">Reset</button>
+    <br>
+    <h1>SecuGen Capture Response</h1>
+    <img src="data:image/bmp;base64,{{ metadata.BMPBase64 }}">
+    {% if metadata %}
+    <style>
+        table {
+            width: auto;
+            table-layout: auto;
+        }
+        td {
+            border: 1pt solid black;
+            padding: 8px;
+            max-width: 800px;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
+            max-height: 200px;
+        }
+        .column2 {
+            width: 200px; /* Set the width for the second column */
+            max-height: 100px; /* Set the maximum height for the second column */
+            overflow-y: auto; /* Adds a vertical scrollbar to the cell */
+            word-wrap: break-word; /* Allows text to wrap within the cell */
+        }
+
+    </style>
+    <div>
+        <table>
+            <tr><td>Serial Number:</td><td><b>{{ metadata.SerialNumber }}</b></td></tr>
+            <tr><td>Image Width:</td><td><b> {{ metadata.ImageWidth }} pixels</b></td></tr>
+            <tr><td>Image Height:</td><td><b>{{ metadata.ImageHeight }} pixels</b></td></tr>
+            <tr><td>Image DPI:</td><td><b> {{ metadata.ImageDPI }}</b></td></tr>
+            <tr><td>Image Quality:</td><td><b>{{ metadata.ImageQuality }}</b></td></tr>
+            <tr><td>NFIQ(1-5):</td><td><b> {{ metadata.NFIQ }}</b></td></tr>
+            <tr><td>Template(base64):</td><td class="column2"><b> {{ metadata.TemplateBase64 }}</b></td></tr>
+            <tr><td>WSQ Image Size:</td><td><b> {{ metadata.WSQImageSize }}</b></td></tr>
+            <tr><td>EncodeWSQ(base64):</td><td class="column2"><b> {{ metadata.WSQImage }}</b></td></tr>
+        </table>
+    </div>
+    {% endif %}
+</body>
+</html>

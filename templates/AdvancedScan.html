@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Advanced Scan</title>
+
+    <script>
+        function submitForm() {
+            const url = 'https://localhost:8443/SGIFPCapture';
+            var params = "timeout=" + document.getElementById("timeout").value;
+            params += "&quality=" +  document.getElementById("quality").value;
+            params += "&licstr=" + encodeURIComponent("{{ user_input.SecuGen_Lic }}"); 
+            params += "&templateformat=" + document.getElementById("template_format").value;
+            params += "&imagewsqrate=" + document.getElementById("imagewsqrate").value;
+            params += "&fakeDetection=" + document.getElementById("fake_detect").value;
+
+            // Fetching data from the external API
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
+            }).then( response => {
+                return response.json();
+            })
+            .then((responsedata) => {
+                let result = responsedata;
+
+                // Prepare form submission to backend
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Display_Image';
+
+                // Fill form with received data
+                ['ErrorCode', 'Manufacturer', 'Model', 'SerialNumber', 'ImageWidth', 'ImageHeight', 'ImageDPI', 'ImageQuality', 'NFIQ', 'TemplateBase64', 'WSQImageSize', 'WSQImage', 'BMPBase64'].forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = result[key];
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+
+                // This is sending the user input back to server, so that python makes the match/no match decision
+                ['timeout', 'quality', 'fake_detect', 'template_format', 'imagewsqrate'].forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = document.getElementById(key).value;
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+                return;
+            }).catch(error => {
+                alert("Check if SGIBIOSRV is running; Status = ERROR:");
+            });
+            return;
+        }
+    </script>
+
+</head>
+<body>
+    <h1>Advanced Capture Fingerprint</h1>
+    Timeout (ms): <input type="text" id="timeout" name="timeout" value="10000">
+	<br><br>
+        Quality: <input type="text" id="quality" name="quality" value="50">
+	<br><br>
+        Fake Finger Detection: 
+        <select id="fake_detect" name="fake_detect">
+            <option value="0">0=Disabled</option>
+            <option value="1">1=Touch Chip Only</option>
+            <option value="2">2=Touch Chip + Lowest Fake Threshold</option>
+            <option value="3">3=Touch Chip + Fake Threshold 2</option>
+            <option value="4">4=Touch Chip + Fake Threshold 3</option>
+            <option value="5">5=Touch Chip + Fake Threshold 4</option>
+            <option value="6">6=Touch Chip + Fake Threshold 5</option>
+            <option value="7">7=Touch Chip + Fake Threshold 6</option>
+            <option value="8">8=Touch Chip + Fake Threshold 7</option>
+            <option value="9">9=Touch Chip + Highest Fake Threshold</option>
+        </select>
+	    <br><br>
+        Template Format: 
+        <select id="template_format" name="template_format">
+            <option value="ISO-19794">ISO-19794</option>
+            <option value="ANSI">ANSI</option>
+        </select>
+        <br><br>
+        Image WSQ Rate: 
+        <select id="imagewsqrate" name="imagewsqrate">
+            <option value="0.75">0.75</option>
+            <option value="2.25">2.25</option>
+        </select>
+        <br><br>
+        <button onclick="submitForm()">Submit Data</button>
+    <br><br>
+    <button onclick="window.location.href='/'">Reset</button>
+</body>
+</html>

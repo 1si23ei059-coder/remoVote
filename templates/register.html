@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voter Registration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+            margin-bottom: 1.5rem;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .home-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .home-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        async function checkServiceStatus() {
+            try {
+                const response = await fetch('https://localhost:8443/SGIFPCapture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'timeout=1000&quality=50&licstr=&templateformat=ISO&imagewsqrate=0.75'
+                });
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        async function submitForm() {
+            const url = 'https://localhost:8443/SGIFPCapture';
+            var params = "timeout=" + {{ user_input.Timeout }};
+            params += "&quality=" + {{ user_input.Quality }};
+            params += "&licstr=" + encodeURIComponent("{{ user_input.SecuGen_Lic }}");
+            params += "&templateformat=" + "{{ user_input.TemplateFormat }}";
+            params += "&imagewsqrate=" + "{{ user_input.ImageWSQRate }}";
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/register_scan';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: params
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const responsedata = await response.json();
+                let result = responsedata;
+
+                // Check for API-level errors
+                if (result.ErrorCode && result.ErrorCode > 0) {
+                    alert("SecuGen API Error: " + result.ErrorCode + "\nPlease check:\n1. Fingerprint device is connected\n2. Device drivers are installed\n3. Try scanning again");
+                    return;
+                }
+
+                ['ErrorCode', 'Manufacturer', 'Model', 'SerialNumber', 'ImageWidth', 'ImageHeight', 'ImageDPI', 'ImageQuality', 'NFIQ', 'TemplateBase64', 'WSQImageSize', 'WSQImage', 'BMPBase64'].forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = result[key] || '';
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+            } catch (error) {
+                let errorMsg = "Failed to connect to SecuGen WebAPI service.\n\n";
+                errorMsg += "Possible causes:\n";
+                errorMsg += "1. SGIBIOSRV service is not running\n";
+                errorMsg += "2. Service is not accessible at https://localhost:8443\n";
+                errorMsg += "3. SSL certificate issue (try accepting the certificate in browser)\n";
+                errorMsg += "4. Firewall blocking the connection\n\n";
+                errorMsg += "Solutions:\n";
+                errorMsg += "• Start the SecuGen WebAPI client application\n";
+                errorMsg += "• Check if the service is running on port 8443\n";
+                errorMsg += "• Try accessing https://localhost:8443 in your browser first\n";
+                errorMsg += "• Ensure fingerprint device is connected and drivers are installed\n\n";
+                errorMsg += "Error details: " + error.message;
+                alert(errorMsg);
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Voter Registration</h1>
+        <p>Please place your finger on the scanner to capture your biometric data.</p>
+        <button onclick="submitForm()">Capture Fingerprint</button>
+        <br>
+        <a href="{{ url_for('home') }}" class="home-link">Back to Home</a>
+    </div>
+</body>
+</html>
+

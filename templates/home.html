@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Voting System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+            margin-bottom: 2rem;
+        }
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 2rem;
+        }
+        button, a.button {
+            background-color: #007bff;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        button:hover, a.button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        .admin-link {
+            margin-top: 2rem;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .admin-link:hover {
+            text-decoration: underline;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #0056b3;
+        }
+        .status-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .status-box.checking {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-box.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-box.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-indicator.online {
+            background-color: #28a745;
+        }
+        .status-indicator.offline {
+            background-color: #dc3545;
+        }
+        .status-indicator.checking {
+            background-color: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    <script>
+        async function checkServiceStatus() {
+            const statusBox = document.getElementById('service-status');
+            const indicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            statusBox.className = 'status-box checking';
+            indicator.className = 'status-indicator checking';
+            statusText.textContent = 'Checking SecuGen WebAPI service...';
+            
+            try {
+                const response = await fetch('https://localhost:8443/SGIFPCapture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'timeout=1000&quality=50&licstr=&templateformat=ISO&imagewsqrate=0.75'
+                });
+                
+                if (response.ok) {
+                    statusBox.className = 'status-box connected';
+                    indicator.className = 'status-indicator online';
+                    statusText.textContent = 'SecuGen WebAPI service is running and accessible';
+                } else {
+                    throw new Error('Service returned error: ' + response.status);
+                }
+            } catch (error) {
+                statusBox.className = 'status-box disconnected';
+                indicator.className = 'status-indicator offline';
+                statusText.innerHTML = 'SecuGen WebAPI service is not accessible<br><small>Error: ' + error.message + '</small>';
+            }
+        }
+        
+        window.onload = function() {
+            checkServiceStatus();
+            // Check every 30 seconds
+            setInterval(checkServiceStatus, 30000);
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Biometric Voting System</h1>
+        <div id="service-status" class="status-box checking">
+            <span id="status-indicator" class="status-indicator checking"></span>
+            <span id="status-text">Checking service status...</span>
+        </div>
+        <div class="info-box">
+            <h3>System Requirements:</h3>
+            <ul>
+                <li>SecuGen fingerprint device (USB connected)</li>
+                <li>SecuGen fingerprint driver installed</li>
+                <li>WebAPI client installed and running</li>
+            </ul>
+        </div>
+        <div class="button-group">
+            <a href="{{ url_for('login') }}" class="button">Voter Login</a>
+        </div>
+        <a href="{{ url_for('admin_login') }}" class="admin-link">Admin Login</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Registration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 {
+            color: #0056b3;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .fingerprint-preview {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .fingerprint-preview img {
+            max-width: 200px;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Complete Registration</h1>
+        <div class="fingerprint-preview">
+            <p>Captured Fingerprint:</p>
+            <img src="data:image/bmp;base64,{{ metadata.BMPBase64 }}" alt="Fingerprint">
+        </div>
+        <form method="POST" action="{{ url_for('save_registration') }}">
+            <input type="text" name="voter_id" placeholder="Enter Voter ID" required>
+            <input type="text" name="name" placeholder="Enter Your Name" required>
+            <button type="submit">Complete Registration</button>
+        </form>
+        <a href="{{ url_for('home') }}" style="display: block; text-align: center; margin-top: 20px; color: #007bff; text-decoration: none;">Back to Home</a>
+    </div>
+</body>
+</html>
+

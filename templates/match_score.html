@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Match Score</title>
+</head>
+<body>
+    <h1>Fingerprint Match Score</h1>
+    <div>
+        <table>
+            <tr>
+                <td><img src="data:image/bmp;base64,{{ metadata1.BMPBase64 }}"></td>
+                <td><img src="data:image/bmp;base64,{{ metadata2.BMPBase64 }}"></td>
+            </tr>
+        </table>
+    </div>
+    <br><br>
+    <h1>Match Score</h1>
+    <p>{{ match_score }}</p>
+    <br>
+    <button onclick="window.location.href='/'">Reset</button>
+</body>
+</html>

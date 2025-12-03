@@ -1,0 +1,78 @@
+<!-- For Compare.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fingerprint Compare</title>
+    <script>
+        // This is mostly the same as SimpleScan
+        function submitForm() {
+            const url = 'https://localhost:8443/SGIMatchScore';
+            var params = "&licstr=" + encodeURIComponent("{{ user_input.SecuGen_Lic }}");
+            params += "&Template1=" + encodeURIComponent("{{ metadata1.template }}");
+            params += "&Template2=" + encodeURIComponent("{{ metadata2.template }}");
+            params += "&Templateformat=" + "{{ user_input.TemplateFormat }}";
+
+            // Fetching data from the external API
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
+            }).then( response => {
+                return response.json();
+            })
+            .then((responsedata) => {
+                let result = responsedata;
+
+                // Prepare form submission to backend
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/matchscore';
+
+                // Fill form with received data -> don't need all of these data elements, but to be complete.....
+                ['ErrorCode', 'MatchingScore'].forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = result[key];
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+
+                // This is sending the user input ->userquality<- back to server, so that python makes the match/no match decision
+                const userquality = document.createElement('input');
+                userquality.type = 'hidden';
+                userquality.name = 'userquality';
+                userquality.value = document.getElementById("userquality").value;
+                form.appendChild(userquality);
+                document.body.appendChild(form);                
+                form.submit();                
+                return;
+
+            }).catch(error => {
+                alert("Check if SGIBIOSRV is running; Status = ERROR:");
+            });
+            return;
+        }
+    </script>
+
+</head>
+<body>
+    <h1>Fingerprint Compare</h1>
+    <div>
+        <table>
+            <tr>
+                <td><img src="data:image/bmp;base64,{{ metadata1.BMPBase64 }}"></td>
+                <td><img src="data:image/bmp;base64,{{ metadata2.BMPBase64 }}"></td>
+            </tr>
+        </table>
+    </div>
+    <br><br>
+    <label>Quality Threshold:</label>
+    <input type="text" id=userquality value="{{ MatchQuality }}">
+    <button onclick="submitForm()">Match Templates</button>
+    <br><br>
+    <button onclick="window.location.href='/'">Reset</button>
+</body>
+</html>

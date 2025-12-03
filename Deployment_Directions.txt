@@ -1,0 +1,53 @@
+3:36 PM 5/23/2024
+
+Server2022 Installation:
+
+1.  Windows PowerShell with Administrator access
+Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe" -OutFile "python-3.12.3-amd64.exe"
+
+2.  Windows PowerShell with Administrator access
+.\python-3.12.3-amd64.exe InstallAllUsers=1 PrependPath=1 Include_test=0
+**** Don't install Python into a directory that has SPACE in directory name -->C:\Program Files\.....<--
+**** The space fails with IIS for some reason.   Possibly also a administrative rights issue.
+**** Also make sure that you give IIS_IUSRS file permissions within windows explorer for web site directory.
+
+3.  Windows PowerShell with Administrator Access
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+*** adding \Python312 to system wide pathing.
+**** command prompt >Path
+**** confirm that \Python312 is included in the pathing.
+
+
+To confirm all is well:  (powershell or command prompt)
+>python -V
+
+Good Response:
+Python 3.12.3
+
+4.  DOS windows with administrator privilages:  install wfastcgi
+>pip install wfastcgi
+
+5.  DOS windows with administrator privilages:  install flask
+> pip install flask
+
+6.  Command prompt with administrative privileges:
+ - >pip install Flask requests
+
+7.  IIS -> Add New Site
+*** Create New Web Site for Python site created.
+
+8.  Web Site Root Directory:  Edit Web.Config with notepad.exe.
+Edit PYTHONPATH -> put proper path that you have selected for python web site
+Edit WSGI_LOG -> put proper path that you have selected for python web site
+
+9.  Python web site created in #4.   Handler Mappings -> Add Script Map.   
+Request path:   *
+Executable:  C:\Python312\python.exe|C:\Python312\lib\site-packages\wfastcgi.py
+Name:   FastCGI
+Button -> Request Restrictions:
+Mapping tab -> No checkbox on invoke handler only if request is mapped to:
+Verbs tab -> "All verbs"
+Access tab -> "Script"
+
+"Yes" -> Allow ISAPI extension; ISAPI and CGI Restirctions list list or to update an existing extension entry to "Allowed"
+

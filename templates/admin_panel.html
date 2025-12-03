@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        .logout-btn {
+            float: right;
+            background-color: #dc3545;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #dddfe2;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        .section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+         button, a.button {
+            background-color: #007bff;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        button:hover, a.button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <form method="POST" action="{{ url_for('admin_logout') }}" style="float: right;">
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+        <h1>Admin Panel</h1>
+
+        <div class="section">
+            <h2>Upload Candidates CSV</h2>
+            <form id="upload-form" enctype="multipart/form-data">
+                <input type="file" id="csv-file" accept=".csv" required>
+                <button type="submit">Upload Candidates</button>
+            </form>
+            <p id="upload-status"></p>
+        </div>
+        <div class="">
+                <a href="{{ url_for('register') }}" class="button">Register as Voter</a>
+        </div>
+        <div class="section">
+            <h2>Data Management</h2>
+            <p style="color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                <strong>⚠️ Warning:</strong> Deleting data is permanent and cannot be undone. All records will be removed except the header row.
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <button class="danger" onclick="confirmDelete('daily_votes', 'Daily Votes')">Delete Daily Votes Data</button>
+                <button class="danger" onclick="confirmDelete('voters', 'Voters Data')">Delete Voters Data</button>
+                <button class="danger" onclick="confirmDelete('votes', 'Votes Data')">Delete Votes Data</button>
+                <button class="danger" onclick="confirmDelete('candidates', 'Candidates Data')">Delete Candidates Data</button>
+            </div>
+            <p id="delete-status" style="margin-top: 15px;"></p>
+        </div>
+
+        <div class="section">
+            <h2>Registered Voters ({{ voters|length }})</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Voter ID</th>
+                        <th>Name</th>
+                        <th>Registration Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for voter in voters %}
+                    <tr>
+                        <td>{{ voter.voter_id }}</td>
+                        <td>{{ voter.name }}</td>
+                        <td>{{ voter.registration_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Election Results</h2>
+            {% if votes %}
+                {% for constituency, candidates in votes.items() %}
+                <h3>{{ constituency }}</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Candidate</th>
+                            <th>Votes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for candidate, count in candidates.items() %}
+                        <tr>
+                            <td>{{ candidate }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endfor %}
+            {% else %}
+                <p>No votes recorded yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h2>Vote Log</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Voter ID</th>
+                        <th>Name</th>
+                        <th>State</th>
+                        <th>Constituency</th>
+                        <th>Candidate</th>
+                        <th>Party</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vote in vote_log %}
+                    <tr>
+                        <td>{{ vote.date }}</td>
+                        <td>{{ vote.voter_id }}</td>
+                        <td>{{ vote.name }}</td>
+                        <td>{{ vote.state }}</td>
+                        <td>{{ vote.constituency }}</td>
+                        <td>{{ vote.candidate_name }}</td>
+                        <td>{{ vote.party }}</td>
+                        <td>{{ vote.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('csv-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/admin/upload_candidates', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('upload-status').textContent = 'Candidates uploaded successfully!';
+                    document.getElementById('upload-status').style.color = 'green';
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    document.getElementById('upload-status').textContent = 'Error: ' + result.error;
+                    document.getElementById('upload-status').style.color = 'red';
+                }
+            } catch (error) {
+                document.getElementById('upload-status').textContent = 'Error: ' + error.message;
+                document.getElementById('upload-status').style.color = 'red';
+            }
+        });
+
+        function confirmDelete(dataType, dataName) {
+            const message = `Are you sure you want to delete ALL ${dataName}?\n\nThis action is PERMANENT and cannot be undone!\n\nAll records will be deleted except the header row.`;
+            
+            if (confirm(message)) {
+                deleteData(dataType, dataName);
+            }
+        }
+
+        async function deleteData(dataType, dataName) {
+            const statusDiv = document.getElementById('delete-status');
+            statusDiv.textContent = `Deleting ${dataName}...`;
+            statusDiv.style.color = '#856404';
+            statusDiv.style.backgroundColor = '#fff3cd';
+            statusDiv.style.padding = '10px';
+            statusDiv.style.borderRadius = '5px';
+
+            try {
+                const response = await fetch(`/admin/delete_${dataType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.textContent = `✓ ${result.message}`;
+                    statusDiv.style.color = '#155724';
+                    statusDiv.style.backgroundColor = '#d4edda';
+                    
+                    // Reload page after 1.5 seconds to show updated data
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    statusDiv.textContent = `✗ Error: ${result.error || 'Unknown error'}`;
+                    statusDiv.style.color = '#721c24';
+                    statusDiv.style.backgroundColor = '#f8d7da';
+                }
+            } catch (error) {
+                statusDiv.textContent = `✗ Error: ${error.message}`;
+                statusDiv.style.color = '#721c24';
+                statusDiv.style.backgroundColor = '#f8d7da';
+            }
+        }
+    </script>
+</body>
+</html>
+

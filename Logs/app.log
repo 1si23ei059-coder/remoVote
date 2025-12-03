@@ -1,0 +1,10 @@
+2024-05-08 13:58:50.927680: wfastcgi.py will restart when files in C:\WebAPIPython-04\ are changed: .*((\.py)|(\.config))$
+2024-05-08 13:58:50.934678: wfastcgi.py 3.0.0 initialized
+2024-05-08 14:14:38.565963: wfastcgi.py will restart when files in C:\WebAPIPython-04\ are changed: .*((\.py)|(\.config))$
+2024-05-08 14:14:38.565963: wfastcgi.py 3.0.0 initialized
+2024-05-09 17:26:28.455701: wfastcgi.py will restart when files in C:\WebAPIPython-14\ are changed: .*((\.py)|(\.config))$
+2024-05-09 17:26:28.461699: wfastcgi.py 3.0.0 initialized
+2024-05-10 10:44:14.761928: wfastcgi.py will restart when files in C:\WebAPIPython-14\ are changed: .*((\.py)|(\.config))$
+2024-05-10 10:44:14.761928: wfastcgi.py 3.0.0 initialized
+2024-05-10 10:48:48.933749: wfastcgi.py will restart when files in C:\WebAPIPython-14\ are changed: .*((\.py)|(\.config))$
+2024-05-10 10:48:48.949374: wfastcgi.py 3.0.0 initialized

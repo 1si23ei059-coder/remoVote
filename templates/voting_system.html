@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Voting System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        h1, h2, h3 { color: #0056b3; margin-bottom: 1.5rem; }
+        p { margin-bottom: 1.5rem; color: #606770; }
+        form {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        input[type="text"], input[type="password"], input[type="file"], select {
+            width: 80%;
+            padding: 14px;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        input[type="file"] { padding: 10px; border: 1px dashed #ccc; background-color: #fafafa; }
+        input[type="text"]:focus, input[type="password"]:focus, select:focus { outline: none; border-color: #007bff; }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        button:hover { background-color: #0056b3; transform: translateY(-2px); }
+        button.vote-btn { background-color: #28a745; }
+        button.vote-btn:hover { background-color: #218838; }
+        button.remove-btn { background-color: #dc3545; padding: 5px 10px; font-size: 12px; }
+        button.remove-btn:hover { background-color: #c82333; }
+        button.action-btn { background-color: #17a2b8; }
+        button.action-btn:hover { background-color: #138496; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { padding: 14px; border-bottom: 1px solid #dddfe2; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .home-link, .logout-btn {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .logout-btn { background: #dc3545; color: white; padding: 10px 15px; border-radius: 5px; float: right; margin-bottom: 10px; }
+        .home-link:hover, .logout-btn:hover { text-decoration: underline; }
+        .voter-info {
+            background-color: #e7f3ff;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="voter-info">
+            <p><strong>Voter ID:</strong> {{ voter_id }}</p>
+            <p><strong>Name:</strong> {{ voter_name }}</p>
+        </div>
+
+        <div id="page-state" class="page active">
+            <h1>Select Your State</h1>
+            <form id="state-form">
+                <select id="state-select" required>
+                    <option value="" disabled selected>-- Loading States --</option>
+                </select>
+                <button type="submit">Next</button>
+            </form>
+        </div>
+
+        <div id="page-constituency" class="page">
+            <h1>Select Your Constituency</h1>
+            <form id="constituency-form">
+                <select id="constituency-select" required>
+                    <option value="" disabled selected>-- Select a State First --</option>
+                </select>
+                <button type="submit">Next</button>
+            </form>
+        </div>
+
+        <div id="page-voter-id" class="page">
+            <h1>Voter Verification</h1>
+            <p>Please confirm your Voter ID to proceed.</p>
+            <form id="voter-id-form">
+                <input type="text" id="voter-id-input" placeholder="Enter Voter ID" value="{{ voter_id }}" required>
+                <button type="submit">Verify & Proceed</button>
+            </form>
+        </div>
+
+        <div id="page-candidates" class="page">
+            <h1 id="candidates-title">Candidates</h1>
+            <div id="candidates-table-container"></div>
+        </div>
+
+        <div id="page-thankyou" class="page">
+            <h1>Thank You for Voting!</h1>
+            <p>Your vote has been successfully recorded.</p>
+            <a href="{{ url_for('home') }}" class="home-link">Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        let candidatesData = [];
+        let selectedState = '';
+        let selectedConstituency = '';
+        const currentVoterId = '{{ voter_id }}';
+        const currentVoterName = '{{ voter_name }}';
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        function parseCSV(csvText) {
+            const data = [];
+            const lines = csvText.trim().split('\n');
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].match(/(".*?"|[^",\r]+)(?=\s*,|\s*$)/g) || [];
+                if (values.length >= 5) {
+                    data.push({
+                        "State": values[1] ? values[1].trim().replace(/^"|"$/g, '') : '',
+                        "Constituency": values[2] ? values[2].trim().replace(/^"|"$/g, '') : '',
+                        "Party": values[3] ? values[3].trim().replace(/^"|"$/g, '') : '',
+                        "Candidate Name": values[4] ? values[4].trim().replace(/^"|"$/g, '') : ''
+                    });
+                }
+            }
+            return data;
+        }
+
+        function populateStates() {
+            const selectElement = document.getElementById('state-select');
+            if (candidatesData.length === 0) {
+                selectElement.innerHTML = '<option value="" disabled selected>-- No Candidate Data --</option>';
+                return;
+            }
+            const states = [...new Set(candidatesData.map(c => c.State))].sort();
+            selectElement.innerHTML = '<option value="" disabled selected>-- Select a State --</option>';
+            states.forEach(state => {
+                if (state) {
+                    const option = document.createElement('option');
+                    option.value = state;
+                    option.textContent = state;
+                    selectElement.appendChild(option);
+                }
+            });
+        }
+
+        function populateConstituencies(state) {
+            const constituencies = [...new Set(candidatesData.filter(c => c.State === state).map(c => c.Constituency))].sort();
+            const selectElement = document.getElementById('constituency-select');
+            selectElement.innerHTML = '<option value="" disabled selected>-- Select a Constituency --</option>';
+            constituencies.forEach(con => {
+                if (con) {
+                    const option = document.createElement('option');
+                    option.value = con;
+                    option.textContent = con;
+                    selectElement.appendChild(option);
+                }
+            });
+        }
+
+        function displayCandidates(constituency) {
+            console.log('Displaying candidates for constituency:', constituency);
+            console.log('Selected state:', selectedState);
+            console.log('Total candidates data:', candidatesData.length);
+            
+            const filteredCandidates = candidatesData.filter(c => {
+                const matchesConstituency = c.Constituency && c.Constituency.trim() === constituency.trim();
+                const matchesState = c.State && c.State.trim() === selectedState.trim();
+                return matchesConstituency && matchesState;
+            });
+            
+            console.log('Filtered candidates:', filteredCandidates.length);
+            
+            const container = document.getElementById('candidates-table-container');
+            const titleElement = document.getElementById('candidates-title');
+            
+            if (titleElement) {
+                titleElement.textContent = `Candidates for ${constituency}`;
+            }
+
+            if (filteredCandidates.length === 0) {
+                container.innerHTML = `<p>No candidates found for "${constituency}" in "${selectedState}". Please contact administrator.</p>`;
+                return;
+            }
+
+            let tableHTML = `<table><thead><tr><th>Candidate Name</th><th>Party</th><th>Vote</th></tr></thead><tbody>`;
+            filteredCandidates.forEach(candidate => {
+                const candidateName = (candidate['Candidate Name'] || candidate.CandidateName || '').replace(/'/g, "&#39;");
+                const party = (candidate.Party || '').replace(/'/g, "&#39;");
+                const candidateData = {
+                    'Candidate Name': candidate['Candidate Name'] || candidate.CandidateName,
+                    'Party': candidate.Party,
+                    'State': candidate.State,
+                    'Constituency': candidate.Constituency
+                };
+                const encodedData = btoa(JSON.stringify(candidateData));
+                tableHTML += `<tr><td>${candidateName}</td><td>${party}</td><td><button class="vote-btn" onclick="castVote(event, '${encodedData}')">Vote</button></td></tr>`;
+            });
+            tableHTML += `</tbody></table>`;
+            container.innerHTML = tableHTML;
+        }
+
+        async function castVote(event, candidateDataString) {
+            document.querySelectorAll('.vote-btn').forEach(btn => btn.disabled = true);
+            event.target.textContent = 'Voting...';
+
+            const candidate = JSON.parse(atob(candidateDataString));
+
+            try {
+                const response = await fetch('/cast_vote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        state: selectedState,
+                        constituency: selectedConstituency,
+                        candidate_name: candidate['Candidate Name'],
+                        party: candidate.Party
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    setTimeout(() => showPage('page-thankyou'), 500);
+                } else {
+                    alert('Error: ' + result.error);
+                    document.querySelectorAll('.vote-btn').forEach(btn => btn.disabled = false);
+                    event.target.textContent = 'Vote';
+                }
+            } catch (error) {
+                alert('Error casting vote: ' + error.message);
+                document.querySelectorAll('.vote-btn').forEach(btn => btn.disabled = false);
+                event.target.textContent = 'Vote';
+            }
+        }
+
+        // Load candidates data
+        async function loadCandidates() {
+            try {
+                console.log('Loading candidates data...');
+                const response = await fetch('/get_candidates_json');
+                
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                
+                const data = await response.json();
+                console.log('Candidates data received:', data.length, 'candidates');
+                
+                if (data && data.length > 0) {
+                    candidatesData = data;
+                    populateStates();
+                    console.log('Candidates loaded successfully');
+                } else {
+                    console.warn('No candidate data available');
+                    const selectElement = document.getElementById('state-select');
+                    if (selectElement) {
+                        selectElement.innerHTML = '<option value="" disabled selected>-- No Candidate Data Available --</option>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading candidates:', error);
+                const selectElement = document.getElementById('state-select');
+                if (selectElement) {
+                    selectElement.innerHTML = '<option value="" disabled selected>-- Error Loading Candidates --</option>';
+                }
+            }
+        }
+
+        // Event listeners
+        document.getElementById('state-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            selectedState = document.getElementById('state-select').value;
+            if (selectedState) {
+                populateConstituencies(selectedState);
+                showPage('page-constituency');
+            }
+        });
+
+        document.getElementById('constituency-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            selectedConstituency = document.getElementById('constituency-select').value;
+            if (selectedConstituency) {
+                showPage('page-voter-id');
+            }
+        });
+
+        document.getElementById('voter-id-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Voter ID form submitted');
+            
+            const enteredVoterId = document.getElementById('voter-id-input').value.toUpperCase().trim();
+            const expectedVoterId = (currentVoterId || '').toUpperCase().trim();
+            
+            console.log('Entered Voter ID:', enteredVoterId);
+            console.log('Expected Voter ID:', expectedVoterId);
+            console.log('Selected Constituency:', selectedConstituency);
+            console.log('Candidates Data Length:', candidatesData.length);
+            
+            // Validate voter ID
+            if (!enteredVoterId) {
+                alert('Please enter your Voter ID.');
+                return;
+            }
+            
+            if (expectedVoterId && enteredVoterId !== expectedVoterId) {
+                alert('Voter ID does not match. Please use the correct ID.\n\nEntered: ' + enteredVoterId + '\nExpected: ' + expectedVoterId);
+                return;
+            }
+            
+            // Validate constituency is selected
+            if (!selectedConstituency) {
+                alert('Please select a constituency first.');
+                showPage('page-constituency');
+                return;
+            }
+            
+            // Check if candidates data is loaded
+            if (candidatesData.length === 0) {
+                alert("Voting cannot proceed. The admin has not loaded any candidate data. Please try refreshing the page.");
+                // Try to reload candidates
+                loadCandidates().then(() => {
+                    if (candidatesData.length > 0) {
+                        displayCandidates(selectedConstituency);
+                        showPage('page-candidates');
+                    }
+                });
+                return;
+            }
+            
+            // Display candidates and proceed
+            try {
+                displayCandidates(selectedConstituency);
+                showPage('page-candidates');
+                console.log('Successfully displayed candidates');
+            } catch (error) {
+                console.error('Error displaying candidates:', error);
+                alert('Error displaying candidates. Please try again.');
+            }
+        });
+
+        // Initialize
+        window.onload = function() {
+            loadCandidates();
+        };
+    </script>
+</body>
+</html>
+

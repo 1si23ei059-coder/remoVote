@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+            margin-bottom: 1.5rem;
+        }
+        .fingerprints {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+        .fingerprint-item {
+            text-align: center;
+            margin: 10px;
+        }
+        .fingerprint-item img {
+            max-width: 200px;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status.verifying {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .progress-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #606770;
+        }
+    </style>
+    <script>
+        let verificationComplete = false;
+
+        async function verifyBiometric() {
+            const statusDiv = document.getElementById('status');
+            const progressDiv = document.getElementById('progress');
+            
+            try {
+                // Get templates from backend
+                const template1 = "{{ template1 }}";
+                const template2 = "{{ template2 }}";
+
+                console.log('Template1 length:', template1 ? template1.length : 0);
+                console.log('Template2 length:', template2 ? template2.length : 0);
+
+                if (!template1 || !template2 || template1.trim() === '' || template2.trim() === '') {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: Fingerprint templates are missing. Please scan again.';
+                    return;
+                }
+
+                statusDiv.className = 'status verifying';
+                statusDiv.textContent = 'Step 1: Verifying scan quality...';
+                if (progressDiv) progressDiv.textContent = '';
+
+                // Step 1: Self-verification (compare two scans) - using compare.html logic
+                const selfVerifyUrl = 'https://localhost:8443/SGIMatchScore';
+                let selfVerifyParams = "&licstr=" + encodeURIComponent("{{ user_input.SecuGen_Lic }}");
+                selfVerifyParams += "&Template1=" + encodeURIComponent(template1);
+                selfVerifyParams += "&Template2=" + encodeURIComponent(template2);
+                selfVerifyParams += "&Templateformat=" + "{{ user_input.TemplateFormat }}";
+
+                console.log('Self-verification request...');
+                const selfVerifyResponse = await fetch(selfVerifyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: selfVerifyParams
+                });
+
+                if (!selfVerifyResponse.ok) {
+                    throw new Error(`HTTP error! status: ${selfVerifyResponse.status}`);
+                }
+
+                const selfVerifyData = await selfVerifyResponse.json();
+                console.log('Self-verification result:', selfVerifyData);
+
+                if (selfVerifyData.ErrorCode > 0) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Self-verification failed. Error Code: ' + selfVerifyData.ErrorCode + '. Please try again.';
+                    return;
+                }
+
+                // Threshold: 20 as requested
+                if (selfVerifyData.MatchingScore < 20) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Scan quality check failed. Score: ' + selfVerifyData.MatchingScore + ' (minimum: 20). Please scan again.';
+                    return;
+                }
+
+                statusDiv.textContent = 'Step 2: Loading registered voters...';
+                if (progressDiv) progressDiv.textContent = 'Self-verification passed (Score: ' + selfVerifyData.MatchingScore + ')';
+
+                // Step 2: Get all registered voters
+                const votersResponse = await fetch('/get_voters_json');
+                
+                if (!votersResponse.ok) {
+                    throw new Error('Failed to fetch voters: HTTP ' + votersResponse.status);
+                }
+                
+                let voters = await votersResponse.json();
+                console.log('Fetched voters response:', voters);
+                console.log('Response type:', typeof voters);
+                console.log('Is array:', Array.isArray(voters));
+                
+                // Handle error response
+                if (voters && voters.error) {
+                    throw new Error('Server error: ' + voters.error);
+                }
+                
+                // Ensure it's an array
+                if (!Array.isArray(voters)) {
+                    if (voters && voters.voters) {
+                        voters = voters.voters;
+                    } else {
+                        voters = [];
+                    }
+                }
+                
+                console.log('Number of voters:', voters ? voters.length : 0);
+                console.log('Voters data:', voters);
+
+                if (!voters || voters.length === 0) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'No registered voters found. Please register first.';
+                    if (progressDiv) progressDiv.textContent = 'Make sure you have completed registration with biometric data.';
+                    return;
+                }
+
+                // Filter voters with valid templates
+                const validVoters = voters.filter(v => v.template_base64 && v.template_base64.trim() && v.template_base64.trim().length > 10);
+                console.log('Valid voters with templates:', validVoters.length);
+
+                if (validVoters.length === 0) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'No voters with valid biometric data found.';
+                    return;
+                }
+
+                statusDiv.textContent = 'Step 3: Comparing with registered voters...';
+                if (progressDiv) progressDiv.textContent = `Comparing with ${validVoters.length} voter(s)...`;
+
+                let bestMatch = null;
+                let bestScore = 0;
+                let checkedCount = 0;
+                let allScores = [];
+
+                // Compare with each registered voter - using compare.html format
+                for (const voter of validVoters) {
+                    checkedCount++;
+                    const currentStatus = `Comparing with ${voter.name || voter.voter_id} (${checkedCount}/${validVoters.length})...`;
+                    statusDiv.textContent = currentStatus;
+                    if (progressDiv) progressDiv.textContent = currentStatus;
+
+                    // Use exact format from compare.html
+                    let matchParams = "&licstr=" + encodeURIComponent("{{ user_input.SecuGen_Lic }}");
+                    matchParams += "&Template1=" + encodeURIComponent(template2);  // Second scan (more reliable)
+                    matchParams += "&Template2=" + encodeURIComponent(voter.template_base64.trim());  // Stored template
+                    matchParams += "&Templateformat=" + "{{ user_input.TemplateFormat }}";
+
+                    try {
+                        const matchResponse = await fetch(selfVerifyUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: matchParams
+                        });
+
+                        if (!matchResponse.ok) {
+                            console.log('Match response error for voter:', voter.voter_id, 'Status:', matchResponse.status);
+                            continue;
+                        }
+
+                        const matchData = await matchResponse.json();
+                        console.log(`Match with ${voter.name} (${voter.voter_id}): Score=${matchData.MatchingScore}, Error=${matchData.ErrorCode}`);
+                        
+                        allScores.push({
+                            voter: voter.name || voter.voter_id,
+                            score: matchData.MatchingScore,
+                            error: matchData.ErrorCode
+                        });
+
+                        // Threshold: 20 as requested
+                        if (matchData.ErrorCode === 0 && matchData.MatchingScore >= 20) {
+                            if (matchData.MatchingScore > bestScore) {
+                                bestScore = matchData.MatchingScore;
+                                bestMatch = voter;
+                                console.log('New best match:', bestMatch.name, 'Score:', bestScore);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error comparing with voter:', voter.voter_id, error);
+                        continue;
+                    }
+                }
+
+                console.log('All comparison scores:', allScores);
+                console.log('Best match:', bestMatch, 'Score:', bestScore);
+
+                // Check if we found a match (threshold: 20)
+                if (bestMatch && bestScore >= 20) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = `✓ Verification Successful!`;
+                    if (progressDiv) {
+                        progressDiv.textContent = `Matched with: ${bestMatch.name} (${bestMatch.voter_id}) | Score: ${bestScore}`;
+                    }
+
+                    // Wait a moment to show success message
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+
+                    // Submit to backend - using compare.html submission format
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/login_verify';
+
+                    const voterIdInput = document.createElement('input');
+                    voterIdInput.type = 'hidden';
+                    voterIdInput.name = 'matched_voter_id';
+                    voterIdInput.value = bestMatch.voter_id;
+                    form.appendChild(voterIdInput);
+
+                    const scoreInput = document.createElement('input');
+                    scoreInput.type = 'hidden';
+                    scoreInput.name = 'MatchingScore';
+                    scoreInput.value = bestScore;
+                    form.appendChild(scoreInput);
+
+                    const errorInput = document.createElement('input');
+                    errorInput.type = 'hidden';
+                    errorInput.name = 'ErrorCode';
+                    errorInput.value = '0';
+                    form.appendChild(errorInput);
+
+                    document.body.appendChild(form);
+                    verificationComplete = true;
+                    console.log('Submitting form with voter_id:', bestMatch.voter_id, 'score:', bestScore);
+                    form.submit();
+                } else {
+                    statusDiv.className = 'status error';
+                    let errorMsg = 'Biometric not found in system.';
+                    if (bestScore > 0) {
+                        errorMsg += ` Best match score: ${bestScore} (minimum required: 20).`;
+                    }
+                    if (allScores.length > 0) {
+                        errorMsg += ` Checked ${allScores.length} voter(s).`;
+                    }
+                    statusDiv.textContent = errorMsg;
+                    if (progressDiv) {
+                        progressDiv.textContent = 'Please register first or try scanning again with the same finger.';
+                    }
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                statusDiv.className = 'status error';
+                let errorMsg = 'Error during verification: ';
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMsg = 'Failed to connect to SecuGen WebAPI service.\n\n';
+                    errorMsg += 'Please ensure:\n';
+                    errorMsg += '1. SecuGen WebAPI client is running\n';
+                    errorMsg += '2. Service is accessible at https://localhost:8443\n';
+                    errorMsg += '3. SSL certificate is accepted\n';
+                    errorMsg += '4. Fingerprint device is connected';
+                } else {
+                    errorMsg += error.message;
+                }
+                
+                statusDiv.textContent = errorMsg;
+                if (progressDiv) progressDiv.textContent = '';
+            }
+        }
+
+        window.onload = function() {
+            console.log('Page loaded, starting verification...');
+            verifyBiometric();
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Biometric Verification</h1>
+        <div class="fingerprints">
+            <div class="fingerprint-item">
+                <p><strong>First Scan</strong></p>
+                <img src="data:image/bmp;base64,{{ metadata1.BMPBase64 }}" alt="First Fingerprint">
+            </div>
+            <div class="fingerprint-item">
+                <p><strong>Second Scan</strong></p>
+                <img src="data:image/bmp;base64,{{ metadata2.BMPBase64 }}" alt="Second Fingerprint">
+            </div>
+        </div>
+        <div id="status" class="status verifying">Starting verification...</div>
+        <div id="progress" class="progress-info"></div>
+    </div>
+</body>
+</html>

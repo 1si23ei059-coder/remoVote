@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Second Scan</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+            margin-bottom: 1.5rem;
+        }
+        .fingerprint-preview {
+            margin-bottom: 20px;
+        }
+        .fingerprint-preview img {
+            max-width: 200px;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script>
+        function submitForm() {
+            const url = 'https://localhost:8443/SGIFPCapture';
+            var params = "timeout=" + {{ user_input.Timeout }};
+            params += "&quality=" + {{ user_input.Quality }};
+            params += "&licstr=" + encodeURIComponent("{{ user_input.SecuGen_Lic }}");
+            params += "&templateformat=" + "{{ user_input.TemplateFormat }}";
+            params += "&imagewsqrate=" + "{{ user_input.ImageWSQRate }}";
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/login_scan2';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
+            }).then(response => {
+                return response.json();
+            })
+            .then((responsedata) => {
+                let result = responsedata;
+
+                ['ErrorCode', 'Manufacturer', 'Model', 'SerialNumber', 'ImageWidth', 'ImageHeight', 'ImageDPI', 'ImageQuality', 'NFIQ', 'TemplateBase64', 'WSQImageSize', 'WSQImage', 'BMPBase64'].forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = result[key];
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+                return;
+            }).catch(error => {
+                let errorMsg = "Failed to connect to SecuGen WebAPI service.\n\n";
+                errorMsg += "Possible causes:\n";
+                errorMsg += "1. SGIBIOSRV service is not running\n";
+                errorMsg += "2. Service is not accessible at https://localhost:8443\n";
+                errorMsg += "3. SSL certificate issue\n";
+                errorMsg += "4. Firewall blocking the connection\n\n";
+                errorMsg += "Solutions:\n";
+                errorMsg += "• Start the SecuGen WebAPI client application\n";
+                errorMsg += "• Check if the service is running on port 8443\n";
+                errorMsg += "• Try accessing https://localhost:8443 in your browser first\n";
+                errorMsg += "• Ensure fingerprint device is connected\n\n";
+                errorMsg += "Error details: " + error.message;
+                alert(errorMsg);
+            });
+            return;
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>First Scan Complete</h1>
+        <div class="fingerprint-preview">
+            <p>First Fingerprint:</p>
+            <img src="data:image/bmp;base64,{{ metadata1.BMPBase64 }}" alt="First Fingerprint">
+        </div>
+        <p><strong>Step 2:</strong> Please scan your fingerprint again for verification.</p>
+        <button onclick="submitForm()">Scan Second Fingerprint</button>
+    </div>
+</body>
+</html>
+
