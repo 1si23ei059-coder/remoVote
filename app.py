@@ -6,6 +6,7 @@ import sys
 from datetime import datetime, timedelta
 import json
 import traceback
+import os
 
 app = Flask(__name__)
 # NOTE: LIC_STR is assumed to be an empty string unless a real SecuGen license is used.
@@ -672,5 +673,8 @@ def get_voters_json():
 # Initialize CSV files on startup
 init_csv_files()
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
