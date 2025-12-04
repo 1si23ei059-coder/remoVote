@@ -1,7 +1,1 @@
-import os
-
-DATA_FOLDER = 'data'
-
-if not os.path.exists(DATA_FOLDER):
-    os.makedirs(DATA_FOLDER)
 
