@@ -19,10 +19,10 @@ login_scan_data = {}
 voting_data = {}
 
 # CSV file paths
-VOTERS_CSV = 'data/voters.csv'
-VOTES_CSV = 'data/votes.csv'
-CANDIDATES_CSV = 'data/candidates.csv'
-DAILY_VOTES_CSV = 'data/daily_votes.csv'
+VOTERS_CSV = 'voters.csv'
+VOTES_CSV = 'votes.csv'
+CANDIDATES_CSV = 'candidates.csv'
+DAILY_VOTES_CSV = 'daily_votes.csv'
 
 
 # HARDCODED TEST VOTE CONSTANTS 
@@ -679,5 +679,6 @@ init_csv_files()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
 
 
